@@ -1,4 +1,5 @@
-'use strict';
+// const users = require('../models/users');
+('use strict');
 const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class roles extends Model {
@@ -13,7 +14,10 @@ module.exports = (sequelize, DataTypes) => {
     }
     roles.init(
         {
-            rolename: DataTypes.STRING,
+            rolename: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
         },
         {
             sequelize,
