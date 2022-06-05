@@ -98,7 +98,6 @@ app.post('/api/register', (req, res) => {
             },
         })
         .then((data) => {
-            console.log(data, 'data');
             users
                 .create({
                     name,
