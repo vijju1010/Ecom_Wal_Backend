@@ -1,7 +1,26 @@
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const db = require('./models');
-const { roles, users } = db;
+const { roles, users, categories, products } = db;
+
+// select * from products where categoryId = 1;
+
+// categories
+//     .findAll({
+//         include: [
+//             {
+//                 model: products,
+//                 where: {
+//                     categoryname: 'Electronics',
+//                 },
+//             },
+//         ],
+//     })
+//     .then((data) => {
+//         data.forEach((element) => {
+//             console.log(element.dataValues);
+//         });
+//     });
 (async () => {
     try {
         const password = bcrypt.hashSync('admin', saltRounds);
@@ -15,9 +34,9 @@ const { roles, users } = db;
             password,
             roleId: 1,
         });
-        console.log('done');
+        console.log('Admin created successfully');
     } catch (error) {
-        console.log(error);
+        console.log('Admin created already');
     }
 })();
 
