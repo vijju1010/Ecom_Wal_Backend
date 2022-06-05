@@ -38,6 +38,11 @@ module.exports = (sequelize, DataTypes) => {
                     key: 'id',
                 },
             },
+            disabled: {
+                type: DataTypes.BOOLEAN,
+                allowNull: false,
+                defaultValue: false,
+            },
         },
         {
             sequelize,
