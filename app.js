@@ -1,6 +1,6 @@
 const db = require('./models');
 
-const { roles, users, products, categories } = db;
+const { roles, users, products, categories, cart, orders, order_products } = db;
 // products.findAll().then((data) => {
 //     data.forEach((element) => {
 //         console.log(element.dataValues);
@@ -126,6 +126,7 @@ app.get('/api/products/:id', (req, res) => {
             },
         })
         .then((data) => {
+            console.log(data, 'data');
             res.json({
                 success: true,
                 products: data,
@@ -137,6 +138,175 @@ app.get('/api/products/:id', (req, res) => {
                 message: err,
             });
         });
+});
+
+app.get('/api/cart', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret');
+    cart.findAll({
+        where: {
+            userId: decoded.id,
+        },
+    }).then((data) => {
+        const productids = [];
+        data.forEach((item, index) => {
+            productids.push(item.dataValues.productId);
+        });
+        products
+            .findAll({
+                where: {
+                    id: productids,
+                },
+            })
+            .then((data) => {
+                res.json({
+                    success: true,
+                    cart: data,
+                });
+            })
+            .catch((err) => {
+                res.json({
+                    success: false,
+                    message: err,
+                });
+            });
+    });
+});
+
+app.post('/api/placeorder', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            const { productId } = req.body;
+            users
+                .findOne({
+                    where: {
+                        id: decoded.id,
+                    },
+                })
+                .then((data) => {
+                    console.log(data.id, 'id');
+                    orders
+                        .create({
+                            userId: data.id,
+                            status: 'Yet To Accept Order',
+                            totalPrice: 10,
+                        })
+                        .then((order) => {
+                            order_products
+                                .create({
+                                    orderId: order.id,
+                                    productId: productId,
+                                })
+                                .then((data) => {
+                                    res.json({
+                                        success: true,
+                                        message: 'Order placed successfully',
+                                    });
+                                });
+                        });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
+
+app.get('/api/receivedorders', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            console.log(decoded.roleId);
+            if (decoded.roleId === 1) {
+                users
+                    .findAll({
+                        include: [
+                            {
+                                model: orders,
+                                include: [
+                                    {
+                                        model: order_products,
+                                        include: [
+                                            {
+                                                model: products,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    })
+                    .then((data) => {
+                        res.json({
+                            success: true,
+                            orders: data,
+                        });
+                    });
+            }
+        }
+    });
+});
+
+app.post('/api/addtocart', (req, res) => {
+    console.log(req.body, 'req.body');
+    const { productId } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+    console.log(token, 'token');
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            console.log(err, 'err');
+            res.json({
+                success: false,
+                message: 'Invalid token',
+            });
+        } else {
+            const { id } = decoded;
+            console.log(id);
+            users
+                .findOne({
+                    where: {
+                        id: id,
+                    },
+                })
+                .then((data) => {
+                    console.log(data.dataValues, 'data');
+                    cart.findOrCreate({
+                        where: {
+                            userId: data.dataValues.id,
+                            productId: productId,
+                        },
+                    }).then((data) => {
+                        console.log(data, 'data');
+                        res.json({
+                            success: true,
+                            message: 'Product added to cart',
+                            cart: data,
+                        });
+                    });
+                })
+                .catch((err) => {
+                    console.log(err, 'err');
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
 });
 
 app.post('/api/register', (req, res) => {
@@ -162,12 +332,13 @@ app.post('/api/register', (req, res) => {
                     token = jwt.sign(
                         {
                             id: data.dataValues.id,
-                            name: data.dataValues.name,
                             email: data.dataValues.email,
+                            name: data.dataValues.name,
                             roleId: data.dataValues.roleId,
                         },
                         'secret'
                     );
+                    // console.log(jwt.decode(token), 'token');
                     res.json({
                         success: true,
                         message: 'User created successfully',

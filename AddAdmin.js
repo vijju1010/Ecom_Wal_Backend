@@ -85,3 +85,53 @@ console.log(
 //                 console.log('done');
 //             });
 //     });
+
+
+
+
+app.get('/api/receivedorders', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            console.log(decoded.roleId);
+            if (decoded.roleId === 1) {
+                orders
+                    .findAll({
+                        subQuery: false,
+                        include: [
+                            {
+                                model: order_products,
+                                include: [
+                                    {
+                                        model: products,
+                                        include: [
+                                            {
+                                                model: categories,
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    })
+                    .then((data) => {
+                        res.json({
+                            success: true,
+                            orders: data,
+                        });
+                    })
+                    .catch((err) => {
+                        res.json({
+                            success: false,
+                            message: err,
+                        });
+                    });
+            }
+        }
+    });
+});
