@@ -10,12 +10,18 @@ const jwt = require('jsonwebtoken');
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const cors = require('cors');
 const jsonParser = bodyParser.json();
 const bcrypt = require('bcrypt');
 app.use(jsonParser);
 const port = 3000;
-app.use(cors());
+const cors = require('cors');
+const corsOptions = {
+    origin: '*',
+    credentials: true, //access-control-allow-credentials:true
+    optionSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 
 app.get('/api/categories', (req, res) => {
     categories
@@ -24,6 +30,51 @@ app.get('/api/categories', (req, res) => {
             res.json({
                 success: true,
                 categories: data,
+            });
+        })
+        .catch((err) => {
+            res.json({
+                success: false,
+                message: err,
+            });
+        });
+});
+app.post('/api/categories', (req, res) => {
+    console.log(req.body, 'req.body');
+    categories
+        .create({
+            categoryname: req.body.category,
+        })
+        .then((data) => {
+            console.log(data, 'data');
+            res.json({
+                success: true,
+                message: 'Category created successfully',
+                category: data,
+            });
+        })
+        .catch((err) => {
+            console.log(err, 'err');
+            res.json({
+                success: false,
+                message: err,
+            });
+        });
+});
+
+app.post('/api/products', (req, res) => {
+    console.log(req.body, 'req.body');
+    products
+        .create({
+            productname: req.body.productname,
+            price: req.body.price,
+            categoryId: req.body.categoryId,
+        })
+        .then((data) => {
+            res.json({
+                success: true,
+                message: 'Product created successfully',
+                product: data,
             });
         })
         .catch((err) => {
