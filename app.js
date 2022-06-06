@@ -140,12 +140,12 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 app.post('/api/register', (req, res) => {
-    const { name, email, password, phonenumber } = req.body;
+    const { name, email, password, phonenumber, role } = req.body;
     const passwordHash = bcrypt.hashSync(password, 10);
     roles
         .findOne({
             where: {
-                rolename: 'user',
+                rolename: role,
             },
         })
         .then((data) => {
