@@ -9,9 +9,9 @@ const { roles, users, products, categories, cart, orders, order_products } = db;
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const app = express();
+const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
-const bcrypt = require('bcrypt');
 app.use(jsonParser);
 const port = 3000;
 const cors = require('cors');
@@ -40,7 +40,7 @@ app.get('/api/categories', (req, res) => {
         });
 });
 app.post('/api/categories', (req, res) => {
-    console.log(req.body, 'req.body');
+    // console.log(req.body, 'req.body');
     categories
         .create({
             categoryname: req.body.category,
@@ -126,7 +126,7 @@ app.get('/api/products/:id', (req, res) => {
             },
         })
         .then((data) => {
-            console.log(data, 'data');
+            // console.log(data, 'data');
             res.json({
                 success: true,
                 products: data,
@@ -183,6 +183,7 @@ app.post('/api/placeorder', (req, res) => {
             });
         } else {
             const { productId } = req.body;
+            console.log(productId, 'productId');
             users
                 .findOne({
                     where: {
@@ -204,6 +205,7 @@ app.post('/api/placeorder', (req, res) => {
                                     productId: productId,
                                 })
                                 .then((data) => {
+                                    console.log(data, 'data');
                                     res.json({
                                         success: true,
                                         message: 'Order placed successfully',
@@ -239,12 +241,14 @@ app.get('/api/receivedorders', (req, res) => {
                                 model: orders,
                                 include: [
                                     {
-                                        model: order_products,
-                                        include: [
-                                            {
-                                                model: products,
-                                            },
-                                        ],
+                                        as: 'orderProducts',
+                                        model: products,
+                                        through: {
+                                            attributes: [
+                                                'orderId',
+                                                'productId',
+                                            ],
+                                        },
                                     },
                                 ],
                             },
@@ -257,6 +261,92 @@ app.get('/api/receivedorders', (req, res) => {
                         });
                     });
             }
+        }
+    });
+});
+
+// app.get('/api/receivedorders', (req, res) => {
+//     const token = req.headers.authorization.split(' ')[1];
+//     jwt.verify(token, 'secret', (err, decoded) => {
+//         if (err) {
+//             res.json({
+//                 success: false,
+//                 message: err,
+//             });
+//         } else {
+//             console.log(decoded.roleId);
+//             if (decoded.roleId === 1) {
+//                 users
+//                     .findAll({
+//                         include: [
+//                             {
+//                                 model: orders,
+//                                 include: [
+//                                     {
+//                                         model: order_products,
+//                                         include: [
+//                                             {
+//                                                 model: products,
+//                                             },
+//                                         ],
+//                                     },
+//                                 ],
+//                             },
+//                         ],
+//                     })
+//                     .then((data) => {
+//                         res.json({
+//                             success: true,
+//                             orders: data,
+//                         });
+//                     });
+//             }
+//         }
+//     });
+// });
+
+app.get('/api/placedorders', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            users
+                .findOne({
+                    where: {
+                        id: decoded.id,
+                    },
+                    include: [
+                        {
+                            model: orders,
+                            include: [
+                                {
+                                    model: order_products,
+                                    include: [
+                                        {
+                                            model: products,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                })
+                .then((data) => {
+                    res.json({
+                        success: true,
+                        placedorders: data,
+                    });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
         }
     });
 });
