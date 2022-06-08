@@ -1,16 +1,14 @@
 const db = require('./models');
 
 const { roles, users, products, categories, cart, orders, order_products } = db;
-// products.findAll().then((data) => {
-//     data.forEach((element) => {
-//         console.log(element.dataValues);
-//     });
-// });
+const sequelize = db.sequelize;
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
+const Auth = require('./routes/Auth');
+const Admin = require('./routes/Admin');
 const jsonParser = bodyParser.json();
 app.use(jsonParser);
 const port = 3000;
@@ -22,6 +20,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use('/auth', Auth);
+app.use('/admin', Admin);
 
 app.get('/api/categories', (req, res) => {
     categories
@@ -41,81 +42,39 @@ app.get('/api/categories', (req, res) => {
 });
 app.post('/api/categories', (req, res) => {
     // console.log(req.body, 'req.body');
-    categories
-        .create({
-            categoryname: req.body.category,
-        })
-        .then((data) => {
-            console.log(data, 'data');
-            res.json({
-                success: true,
-                message: 'Category created successfully',
-                category: data,
-            });
-        })
-        .catch((err) => {
-            console.log(err, 'err');
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
             res.json({
                 success: false,
                 message: err,
             });
-        });
-});
-
-app.post('/api/products', (req, res) => {
-    console.log(req.body, 'req.body');
-    products
-        .create({
-            productname: req.body.productname,
-            price: req.body.price,
-            categoryId: req.body.categoryId,
-        })
-        .then((data) => {
-            res.json({
-                success: true,
-                message: 'Product created successfully',
-                product: data,
-            });
-        })
-        .catch((err) => {
-            res.json({
-                success: false,
-                message: err,
-            });
-        });
-});
-
-app.put('/api/products/:productId/disable', (req, res) => {
-    const { productId } = req.params;
-    // console.log(productId, req.body.disabled, 'productId');
-    products
-        .update(
-            {
-                disabled: !req.body.disabled,
-            },
-            {
-                where: {
-                    id: req.params.productId,
-                },
-                returning: true,
-                plain: true,
+        } else {
+            if (decoded.roleId === 1) {
+                categories
+                    .findOrCreate({
+                        where: {
+                            categoryname: req.body.category,
+                        },
+                        defaults: {
+                            categoryname: req.body.categoryname,
+                        },
+                    })
+                    .then((data) => {
+                        res.json({
+                            success: true,
+                            category: data,
+                        });
+                    })
+                    .catch((err) => {
+                        res.json({
+                            success: false,
+                            message: err,
+                        });
+                    });
             }
-        )
-        .then((data) => {
-            // console.log(data[1].dataValues, 'data');
-            res.json({
-                product: data[1].dataValues,
-                success: true,
-                message: 'Product disabled successfully',
-            });
-        })
-        .catch((err) => {
-            // console.log(err, 'err');
-            res.json({
-                success: false,
-                message: err,
-            });
-        });
+        }
+    });
 });
 
 app.get('/api/products/:id', (req, res) => {
@@ -139,7 +98,21 @@ app.get('/api/products/:id', (req, res) => {
             });
         });
 });
-
+app.get('/api/product/:productId', (req, res) => {
+    products
+        .findOne({
+            where: {
+                id: req.params.productId,
+            },
+        })
+        .then((data) => {
+            // console.log(data, 'data');
+            res.json({
+                success: true,
+                product: data,
+            });
+        });
+});
 app.get('/api/cart', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     const decoded = jwt.verify(token, 'secret');
@@ -223,88 +196,6 @@ app.post('/api/placeorder', (req, res) => {
     });
 });
 
-app.get('/api/receivedorders', (req, res) => {
-    const token = req.headers.authorization.split(' ')[1];
-    jwt.verify(token, 'secret', (err, decoded) => {
-        if (err) {
-            res.json({
-                success: false,
-                message: err,
-            });
-        } else {
-            console.log(decoded.roleId);
-            if (decoded.roleId === 1) {
-                users
-                    .findAll({
-                        include: [
-                            {
-                                model: orders,
-                                include: [
-                                    {
-                                        as: 'orderProducts',
-                                        model: products,
-                                        through: {
-                                            attributes: [
-                                                'orderId',
-                                                'productId',
-                                            ],
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    })
-                    .then((data) => {
-                        res.json({
-                            success: true,
-                            orders: data,
-                        });
-                    });
-            }
-        }
-    });
-});
-
-// app.get('/api/receivedorders', (req, res) => {
-//     const token = req.headers.authorization.split(' ')[1];
-//     jwt.verify(token, 'secret', (err, decoded) => {
-//         if (err) {
-//             res.json({
-//                 success: false,
-//                 message: err,
-//             });
-//         } else {
-//             console.log(decoded.roleId);
-//             if (decoded.roleId === 1) {
-//                 users
-//                     .findAll({
-//                         include: [
-//                             {
-//                                 model: orders,
-//                                 include: [
-//                                     {
-//                                         model: order_products,
-//                                         include: [
-//                                             {
-//                                                 model: products,
-//                                             },
-//                                         ],
-//                                     },
-//                                 ],
-//                             },
-//                         ],
-//                     })
-//                     .then((data) => {
-//                         res.json({
-//                             success: true,
-//                             orders: data,
-//                         });
-//                     });
-//             }
-//         }
-//     });
-// });
-
 app.get('/api/placedorders', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     jwt.verify(token, 'secret', (err, decoded) => {
@@ -319,17 +210,14 @@ app.get('/api/placedorders', (req, res) => {
                     where: {
                         id: decoded.id,
                     },
+                    attributes: ['id', 'name', 'email', 'phonenumber'],
                     include: [
                         {
                             model: orders,
                             include: [
                                 {
-                                    model: order_products,
-                                    include: [
-                                        {
-                                            model: products,
-                                        },
-                                    ],
+                                    as: 'orderProducts',
+                                    model: products,
                                 },
                             ],
                         },
@@ -399,128 +287,92 @@ app.post('/api/addtocart', (req, res) => {
     });
 });
 
-app.post('/api/register', (req, res) => {
-    const { name, email, password, phonenumber, role } = req.body;
-    const passwordHash = bcrypt.hashSync(password, 10);
-    roles
-        .findOne({
-            where: {
-                rolename: role,
-            },
-        })
-        .then((data) => {
-            users
-                .create({
-                    name,
-                    email,
-                    password: passwordHash,
-                    phonenumber,
-                    roleId: data.id,
-                })
+app.delete('/api/cart/:productId', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            const { productId } = req.params;
+            console.log(productId, 'productId');
+            cart.destroy({
+                where: {
+                    productId: productId,
+                    userId: decoded.id,
+                },
+            })
                 .then((data) => {
-                    console.log(data);
-                    token = jwt.sign(
-                        {
-                            id: data.dataValues.id,
-                            email: data.dataValues.email,
-                            name: data.dataValues.name,
-                            roleId: data.dataValues.roleId,
-                        },
-                        'secret'
-                    );
-                    // console.log(jwt.decode(token), 'token');
+                    console.log(data, 'data removed');
                     res.json({
                         success: true,
-                        message: 'User created successfully',
-                        user: data.dataValues,
-                        token,
+                        message: 'Product removed from cart',
                     });
                 })
                 .catch((err) => {
-                    console.log(err);
+                    console.log(err, 'err');
                     res.json({
                         success: false,
                         message: err,
                     });
                 });
-        });
-});
-
-app.post('/api/login', (req, res) => {
-    // console.log(req.body, 'req.body');
-    const { email, password } = req.body;
-    users
-        .findOne({
-            where: {
-                email,
-            },
-        })
-        .then((data) => {
-            if (data) {
-                // console.log(data.dataValues.password, 'data');
-                const isValid = bcrypt.compareSync(
-                    password,
-                    data.dataValues.password
-                );
-                // console.log(isValid, 'isValid');
-                if (isValid) {
-                    // console.log('valid');
-                    const token = jwt.sign(
-                        {
-                            id: data.id,
-                            email: data.email,
-                            name: data.name,
-                            roleId: data.roleId,
-                        },
-                        'secret'
-                        // {
-                        //     expiresIn: '1h',
-                        // }
-                    );
-                    // console.log(data.dataValues, 'data');
-                    res.status(200).json({
-                        success: true,
-                        user: data.dataValues,
-                        token,
-                        message: 'Login Successful',
-                        data: data.dataValues,
-                    });
-                } else {
-                    res.status(401).json({
-                        success: false,
-                        message: 'Invalid Credentials',
-                    });
-                }
-            } else {
-                res.status(401).json({
-                    message: 'Invalid Credentials',
-                });
-            }
-        })
-        .catch((err) => {
-            res.status(500).json({
-                success: false,
-                message: 'Internal Server Error occured',
-            });
-        });
-});
-
-app.get('/api/checkauth', (req, res) => {
-    const token = req.headers.authorization.split(' ')[1];
-    jwt.verify(token, 'secret', (err, decoded) => {
-        if (err) {
-            res.status(401).json({
-                success: false,
-                message: 'Invalid Token',
-            });
-        } else {
-            res.status(200).json({
-                success: true,
-                message: 'Token Valid',
-                data: decoded,
-            });
         }
     });
 });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+app.delete('/api/cancelorder/:orderId', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            const { orderId } = req.params;
+            console.log(orderId, 'orderId');
+            order_products
+                .destroy({
+                    where: {
+                        orderId: orderId,
+                    },
+                })
+                .then((data) => {
+                    orders
+                        .destroy({
+                            where: {
+                                id: orderId,
+                                userId: decoded.id,
+                            },
+                        })
+                        .then((data) => {
+                            console.log(data, 'data removed');
+                            res.json({
+                                success: true,
+                                message: 'Order cancelled',
+                            });
+                        })
+                        .catch((err) => {
+                            console.log(err, 'err');
+                            res.json({
+                                success: false,
+                                message: err,
+                            });
+                        });
+                })
+                .catch((err) => {
+                    console.log(err, 'err');
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
+
+module.exports = app.listen(port, () =>
+    console.log(`Example app listening on port ${port}!`)
+);
