@@ -18,39 +18,54 @@ app.get('/', (req, res) => {
 
 app.post('/categories', (req, res) => {
     // console.log(req.body, 'req.body');
-    const token = req.headers.authorization.split(' ')[1];
-    jwt.verify(token, 'secret', (err, decoded) => {
-        if (err) {
-            res.json({
-                success: false,
-                message: err,
-            });
-        } else {
-            if (decoded.roleId === 1) {
-                categories
-                    .findOrCreate({
-                        where: {
-                            categoryname: req.body.category,
-                        },
-                        defaults: {
-                            categoryname: req.body.categoryname,
-                        },
-                    })
-                    .then((data) => {
-                        res.json({
-                            success: true,
-                            category: data,
+    try {
+        const token = req.headers.authorization.split(' ')[1];
+        // console.log(token, 'token');
+        jwt.verify(token, 'secret', (err, decoded) => {
+            if (err) {
+
+                // console.log('error occured');
+                res.json({
+                    status: '401',
+                    success: false,
+                    message: 'Unauthorized',
+                });
+            } else {
+                if (decoded.roleId === 1) {
+                    categories
+                        .findOrCreate({
+                            where: {
+                                categoryname: req.body.category,
+                            },
+                            defaults: {
+                                categoryname: req.body.categoryname,
+                            },
+                        })
+                        .then((data) => {
+                            res.json({
+                                status: '200',
+                                success: true,
+                                message: 'Category added successfully',
+                                category: data,
+                            });
+                        })
+                        .catch((err) => {
+                            res.json({
+                                status: '401',
+                                success: false,
+                                message: 'Unauthorized',
+                            });
                         });
-                    })
-                    .catch((err) => {
-                        res.json({
-                            success: false,
-                            message: err,
-                        });
-                    });
+                }
             }
-        }
-    });
+        });
+    } catch (err) {
+        res.status(401).json({
+            status: '401',
+            success: false,
+            message: 'Unauthorized',
+        });
+    }
 });
 
 app.post('/products', (req, res) => {
