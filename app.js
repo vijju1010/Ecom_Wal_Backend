@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const Auth = require('./routes/Auth');
 const Admin = require('./routes/Admin');
+const Driver = require('./routes/Driver');
 const jsonParser = bodyParser.json();
 app.use(jsonParser);
 const port = 3000;
@@ -23,6 +24,7 @@ app.use(cors(corsOptions));
 
 app.use('/auth', Auth);
 app.use('/admin', Admin);
+app.use('/driver', Driver);
 
 app.get('/api/categories', (req, res) => {
     categories

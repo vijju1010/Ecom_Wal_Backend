@@ -21,12 +21,15 @@ module.exports = (sequelize, DataTypes) => {
                 as: 'orderProducts',
                 foreignKey: 'orderId',
             });
+            // orders.belongsTo(models.addresses, { foreignKey: 'id' });
+            orders.hasMany(models.driver_orders, { foreignKey: 'orderId' });
         }
     }
     orders.init(
         {
             userId: DataTypes.INTEGER,
             status: DataTypes.STRING,
+            address: DataTypes.STRING,
             totalprice: DataTypes.DOUBLE,
         },
         {
