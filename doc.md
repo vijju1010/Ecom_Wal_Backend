@@ -57,3 +57,5 @@
 
 [] - /api/checkauth GET checkAuth for **all**
 [] -----authorization : Bearer {token}
+
+

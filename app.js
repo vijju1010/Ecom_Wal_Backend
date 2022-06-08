@@ -148,6 +148,65 @@ app.get('/api/cart', (req, res) => {
     });
 });
 
+app.post('/api/checkout', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            const { address, totalprice } = req.body;
+            cart.findAll({
+                where: {
+                    userId: decoded.id,
+                },
+            }).then((data) => {
+                data.forEach((item, index) => {
+                    orders
+                        .create({
+                            userId: decoded.id,
+                            address,
+                            status: 'Yet To Accept Order',
+                            totalprice,
+                        })
+                        .then((data) => {
+                            order_products
+                                .create({
+                                    orderId: data.dataValues.id,
+                                    productId: item.dataValues.productId,
+                                })
+                                .catch((err) => {
+                                    res.json({
+                                        success: false,
+                                        message: err,
+                                    });
+                                });
+                        });
+                });
+                cart.destroy({
+                    where: {
+                        userId: decoded.id,
+                    },
+                })
+                    .then((data) => {
+                        res.json({
+                            success: true,
+                            message: 'Order placed successfully',
+                        });
+                    })
+                    .catch((err) => {
+                        res.json({
+                            success: false,
+                            message: err,
+                        });
+                    });
+            });
+        }
+    });
+});
+
 app.post('/api/placeorder', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     jwt.verify(token, 'secret', (err, decoded) => {
@@ -180,7 +239,7 @@ app.post('/api/placeorder', (req, res) => {
                                     productId: productId,
                                 })
                                 .then((data) => {
-                                    console.log(data, 'data');
+                                    // console.log(data, 'data');
                                     res.json({
                                         success: true,
                                         message: 'Order placed successfully',
@@ -263,7 +322,7 @@ app.post('/api/addtocart', (req, res) => {
                     },
                 })
                 .then((data) => {
-                    console.log(data.dataValues, 'data');
+                    console.log(data.dataValues, 'datadfd');
                     cart.findOrCreate({
                         where: {
                             userId: data.dataValues.id,
