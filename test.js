@@ -1,11 +1,29 @@
-const test1 = () => {
-    return 'test1';
-};
-const test2 = () => {
-    return 'test2';
+const nodemailer = require('nodemailer');
+var transport = nodemailer.createTransport({
+    host: 'smtp.mailtrap.io',
+    port: 2525,
+    auth: {
+        user: '9386be060e523f',
+        pass: 'c70f4d99d9500c',
+    },
+});
+
+const sendMail = (subject, text, link) => {
+    message = {
+        from: 'from-example@email.com',
+        to: 'to-example@email.com',
+        subject: subject,
+        // text: text,
+        html: `<h1>${text}</h1><a href="${link}">Click here to reset password</a>`,
+    };
+    transport.sendMail(message, (err, info) => {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log(info);
+        }
+    });
 };
 
-module.exports = {
-    test1,
-    test2,
-};
+// sendMail('test', 'hi');
+module.exports = sendMail;

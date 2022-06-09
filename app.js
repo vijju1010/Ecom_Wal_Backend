@@ -1,6 +1,15 @@
 const db = require('./models');
 
-const { roles, users, products, categories, cart, orders, order_products } = db;
+const {
+    roles,
+    users,
+    products,
+    categories,
+    cart,
+    orders,
+    order_products,
+    addresses,
+} = db;
 const sequelize = db.sequelize;
 const jwt = require('jsonwebtoken');
 const express = require('express');
@@ -147,6 +156,105 @@ app.get('/api/cart', (req, res) => {
             });
     });
 });
+app.post('/api/addaddress', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            console.log(req.body, 'req.body');
+            addresses
+                .create({
+                    userId: decoded.id,
+                    address: req.body.address,
+                })
+                .then((data) => {
+                    res.json({
+                        success: true,
+                        address: data,
+                    });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
+
+app.get('/api/addresses', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            addresses
+                .findAll({
+                    where: {
+                        userId: decoded.id,
+                    },
+                    include: [
+                        {
+                            model: users,
+                        },
+                    ],
+                })
+                .then((data) => {
+                    res.json({
+                        status: '200',
+                        ok: true,
+                        success: true,
+                        addresses: data,
+                    });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
+
+app.delete('/api/deleteaddress/:addressId', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            addresses
+                .destroy({
+                    where: {
+                        id: req.params.addressId,
+                    },
+                })
+                .then((data) => {
+                    res.json({
+                        success: true,
+                        message: 'Address deleted successfully',
+                    });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
 
 app.post('/api/checkout', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
@@ -158,51 +266,62 @@ app.post('/api/checkout', (req, res) => {
             });
         } else {
             const { address, totalprice } = req.body;
-            cart.findAll({
-                where: {
+            orders
+                .create({
                     userId: decoded.id,
-                },
-            }).then((data) => {
-                data.forEach((item, index) => {
-                    orders
-                        .create({
-                            userId: decoded.id,
-                            address,
-                            status: 'Yet To Accept Order',
-                            totalprice,
-                        })
-                        .then((data) => {
-                            order_products
-                                .create({
-                                    orderId: data.dataValues.id,
-                                    productId: item.dataValues.productId,
-                                })
-                                .catch((err) => {
-                                    res.json({
-                                        success: false,
-                                        message: err,
-                                    });
-                                });
-                        });
-                });
-                cart.destroy({
-                    where: {
-                        userId: decoded.id,
-                    },
+                    status: 'Yet To Accept Order',
+                    address,
+                    totalprice,
                 })
-                    .then((data) => {
-                        res.json({
-                            success: true,
-                            message: 'Order placed successfully',
+                .then((order) => {
+                    const orderProducts = [];
+                    cart.findAll({
+                        where: {
+                            userId: decoded.id,
+                        },
+                    }).then((data) => {
+                        data.forEach((item, index) => {
+                            orderProducts.push({
+                                orderId: order.id,
+                                productId: item.dataValues.productId,
+                            });
                         });
-                    })
-                    .catch((err) => {
-                        res.json({
-                            success: false,
-                            message: err,
-                        });
+                        order_products
+                            .bulkCreate(orderProducts)
+                            .then(() => {
+                                cart.destroy({
+                                    where: {
+                                        userId: decoded.id,
+                                    },
+                                })
+                                    .then(() => {
+                                        res.json({
+                                            success: true,
+                                            message:
+                                                'Order Placed Successfully',
+                                        });
+                                    })
+                                    .catch((err) => {
+                                        res.json({
+                                            success: false,
+                                            message: err,
+                                        });
+                                    });
+                            })
+                            .catch((err) => {
+                                res.json({
+                                    success: false,
+                                    message: err,
+                                });
+                            });
                     });
-            });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
         }
     });
 });
@@ -218,40 +337,57 @@ app.post('/api/placeorder', (req, res) => {
         } else {
             const { productId } = req.body;
             console.log(productId, 'productId');
-            users
+            products
                 .findOne({
                     where: {
-                        id: decoded.id,
+                        id: productId,
                     },
                 })
                 .then((data) => {
-                    console.log(data.id, 'id');
-                    orders
-                        .create({
-                            userId: data.id,
-                            status: 'Yet To Accept Order',
-                            totalPrice: 10,
-                        })
-                        .then((order) => {
-                            order_products
-                                .create({
-                                    orderId: order.id,
-                                    productId: productId,
-                                })
-                                .then((data) => {
-                                    // console.log(data, 'data');
-                                    res.json({
-                                        success: true,
-                                        message: 'Order placed successfully',
-                                    });
-                                });
+                    console.log(data.dataValues, 'data');
+                    if (data.dataValues.disabled === true) {
+                        res.json({
+                            success: false,
+                            message: 'Product is disabled',
                         });
-                })
-                .catch((err) => {
-                    res.json({
-                        success: false,
-                        message: err,
-                    });
+                    } else {
+                        users
+                            .findOne({
+                                where: {
+                                    id: decoded.id,
+                                },
+                            })
+                            .then((data) => {
+                                console.log(data.id, 'id');
+                                orders
+                                    .create({
+                                        userId: data.id,
+                                        status: 'Yet To Accept Order',
+                                        totalPrice: 10,
+                                    })
+                                    .then((order) => {
+                                        order_products
+                                            .create({
+                                                orderId: order.id,
+                                                productId: productId,
+                                            })
+                                            .then((data) => {
+                                                // console.log(data, 'data');
+                                                res.json({
+                                                    success: true,
+                                                    message:
+                                                        'Order placed successfully',
+                                                });
+                                            });
+                                    });
+                            })
+                            .catch((err) => {
+                                res.json({
+                                    success: false,
+                                    message: err,
+                                });
+                            });
+                    }
                 });
         }
     });

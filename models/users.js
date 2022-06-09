@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
             // define association here
 
             users.belongsTo(models.roles, { foreignKey: 'id' });
-            // users.hasMany(models.addresses, { foreignKey: 'userId' });
+            users.hasMany(models.addresses, { foreignKey: 'userId' });
             users.hasMany(models.orders, { foreignKey: 'userId' });
             users.hasMany(models.cart, { foreignKey: 'userId' });
             users.hasMany(models.driver_orders, { foreignKey: 'driverId' });

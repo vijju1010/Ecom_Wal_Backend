@@ -6,6 +6,7 @@ const express = require('express');
 const app = express.Router();
 const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
+const sendMail = require('../test.js');
 const jsonParser = bodyParser.json();
 app.use(jsonParser);
 
@@ -23,7 +24,6 @@ app.post('/categories', (req, res) => {
         // console.log(token, 'token');
         jwt.verify(token, 'secret', (err, decoded) => {
             if (err) {
-
                 // console.log('error occured');
                 res.json({
                     status: '401',
