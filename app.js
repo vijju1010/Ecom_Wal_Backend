@@ -335,7 +335,7 @@ app.post('/api/placeorder', (req, res) => {
                 message: err,
             });
         } else {
-            const { productId } = req.body;
+            const { productId, addressId } = req.body;
             console.log(productId, 'productId');
             products
                 .findOne({
@@ -364,6 +364,7 @@ app.post('/api/placeorder', (req, res) => {
                                         userId: data.id,
                                         status: 'Yet To Accept Order',
                                         totalPrice: 10,
+                                        addressId,
                                     })
                                     .then((order) => {
                                         order_products
