@@ -271,7 +271,7 @@ app.post('/api/checkout', (req, res) => {
                 .create({
                     userId: decoded.id,
                     status: 'Yet To Accept Order',
-                    addressId: 11,
+                    addressId,
                     totalprice,
                 })
                 .then((order) => {
