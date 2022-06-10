@@ -265,15 +265,17 @@ app.post('/api/checkout', (req, res) => {
                 message: err,
             });
         } else {
-            const { address, totalprice } = req.body;
+            const { addressId, totalprice } = req.body;
+            console.log(req.body, 'req.body');
             orders
                 .create({
                     userId: decoded.id,
                     status: 'Yet To Accept Order',
-                    address,
+                    addressId: 11,
                     totalprice,
                 })
                 .then((order) => {
+                    console.log(order, 'order');
                     const orderProducts = [];
                     cart.findAll({
                         where: {
@@ -317,6 +319,7 @@ app.post('/api/checkout', (req, res) => {
                     });
                 })
                 .catch((err) => {
+                    console.log(err, 'err');
                     res.json({
                         success: false,
                         message: err,

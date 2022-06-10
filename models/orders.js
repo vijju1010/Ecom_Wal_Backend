@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
                 as: 'orderProducts',
                 foreignKey: 'orderId',
             });
-            orders.belongsTo(models.addresses, { foreignKey: 'id' });
+            // orders.belongsTo(models.addresses, { foreignKey: 'id' });
             orders.hasMany(models.driver_orders, { foreignKey: 'orderId' });
         }
     }
