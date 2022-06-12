@@ -270,7 +270,6 @@ app.post('/api/checkout', (req, res) => {
             orders
                 .create({
                     userId: decoded.id,
-                    status: 'Yet To Accept Order',
                     addressId,
                     totalprice,
                 })
@@ -365,7 +364,6 @@ app.post('/api/placeorder', (req, res) => {
                                 orders
                                     .create({
                                         userId: data.id,
-                                        status: 'Yet To Accept Order',
                                         totalPrice: 10,
                                         addressId,
                                     })
@@ -428,6 +426,37 @@ app.get('/api/placedorders', (req, res) => {
                     res.json({
                         success: true,
                         placedorders: data,
+                    });
+                })
+                .catch((err) => {
+                    res.json({
+                        success: false,
+                        message: err,
+                    });
+                });
+        }
+    });
+});
+
+app.get('/api/getaddressbyid/:addressId', (req, res) => {
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            res.json({
+                success: false,
+                message: err,
+            });
+        } else {
+            addresses
+                .findOne({
+                    where: {
+                        id: req.params.addressId,
+                    },
+                })
+                .then((data) => {
+                    res.json({
+                        success: true,
+                        address: data,
                     });
                 })
                 .catch((err) => {

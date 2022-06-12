@@ -1,6 +1,7 @@
 const db = require('../models');
 const { roles, users, products, categories, cart, orders, order_products } = db;
 const sequelize = db.sequelize;
+const Op = require('Sequelize').Op;
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const app = express.Router();
@@ -34,8 +35,16 @@ app.get('/getreceivedorders/:driverId', (req, res) => {
                         include: [
                             {
                                 model: orders,
+
                                 where: {
-                                    status: 'Order Accepted Yet Pick Up from Store',
+                                    status: {
+                                        [Op.or]: [
+                                            'ACCEPTED',
+                                            'DELIVERED',
+                                            'OUT_FOR_DELIVERY',
+                                            'CANCELED'
+                                        ],
+                                    },
                                 },
 
                                 include: [

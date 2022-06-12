@@ -167,7 +167,7 @@ app.get('/receivedorders', (req, res) => {
                 message: err,
             });
         } else {
-            console.log(decoded.roleId);
+            console.log(decoded.roleId, 'decoded.roleId');
             if (decoded.roleId === 1) {
                 users
                     .findAll({
@@ -203,12 +203,17 @@ app.put('/setorderstatus/:orderId', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     jwt.verify(token, 'secret', (err, decoded) => {
         if (err) {
+            console.log(err, 'err');
             res.json({
                 success: false,
                 message: err,
             });
         } else {
-            if (decoded.roleId === 1) {
+            if (
+                decoded.roleId === 1 ||
+                decoded.roleId === 3 ||
+                (decoded.roleId === 2 && req.body.status === 'CANCELED')
+            ) {
                 orders
                     .update(
                         {
@@ -234,6 +239,12 @@ app.put('/setorderstatus/:orderId', (req, res) => {
                             message: err,
                         });
                     });
+            } else {
+                console.log('You are not authorized to perform this action');
+                res.json({
+                    success: false,
+                    message: 'You are not authorized to perform this action',
+                });
             }
         }
     });
