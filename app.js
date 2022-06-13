@@ -156,6 +156,33 @@ app.get('/api/cart', (req, res) => {
             });
     });
 });
+
+app.get('/test', (req, res) => {
+    db.sequelize
+        .query(
+            `SELECT orders.id as "orderId",products."productname",users."name",addresses.address,users.phonenumber,orders.status,orders."driverId"
+                from orders,users,products,order_products,addresses
+                    where orders."userId"=users.id
+                    AND orders.status='OUT_FOR_DELIVERY'
+                    AND order_products."productId"=products.id 
+                    AND orders.id=order_products."orderId"
+                    AND orders."addressId"=addresses.id
+                    AND orders."driverId"=${34}`
+        )
+        .then((data) => {
+            if (data) {
+                console.log(data);
+                res.status(200).json({
+                    success: true,
+                    receivedorders: data[0],
+                });
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+});
+
 app.post('/api/addaddress', (req, res) => {
     const token = req.headers.authorization.split(' ')[1];
     const decoded = jwt.verify(token, 'secret', (err, decoded) => {
@@ -170,6 +197,7 @@ app.post('/api/addaddress', (req, res) => {
                 .create({
                     userId: decoded.id,
                     address: req.body.address,
+                    latLang: req.body.latLang,
                 })
                 .then((data) => {
                     res.json({

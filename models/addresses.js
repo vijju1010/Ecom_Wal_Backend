@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
             address: DataTypes.STRING,
             pincode: DataTypes.STRING,
             userId: DataTypes.INTEGER,
+            latLang: DataTypes.STRING,
         },
         {
             sequelize,
