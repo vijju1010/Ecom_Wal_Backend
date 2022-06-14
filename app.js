@@ -163,6 +163,7 @@ app.get('/test', (req, res) => {
             `SELECT orders.id as "orderId",products."productname",users."name",addresses.address,users.phonenumber,orders.status,orders."driverId"
                 from orders,users,products,order_products,addresses
                     where orders."userId"=users.id
+                    
                     AND orders.status='OUT_FOR_DELIVERY'
                     AND order_products."productId"=products.id 
                     AND orders.id=order_products."orderId"

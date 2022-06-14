@@ -1,5 +1,14 @@
 const db = require('../models');
-const { roles, users, products, categories, cart, orders, order_products } = db;
+const {
+    roles,
+    users,
+    products,
+    driver_orders,
+    categories,
+    cart,
+    orders,
+    order_products,
+} = db;
 const sequelize = db.sequelize;
 const Op = require('Sequelize').Op;
 const jwt = require('jsonwebtoken');
@@ -32,16 +41,20 @@ app.get('/getroutes/:id', (req, res) => {
         } else {
             db.sequelize
                 .query(
-                    `SELECT orders.id as "orderId",addresses.address,addresses."latLang"
-                    from orders,addresses
-                        where orders.status='OUT_FOR_DELIVERY'
+                    `SELECT orders.id as "orderId",products."productname",users."name",addresses.address,addresses."latLang",
+                    users.phonenumber,orders.status,driver_orders."driverId"
+                        from orders,users,products,order_products,addresses,driver_orders
+                        where orders."userId"=users.id
+                        AND orders.status='OUT_FOR_DELIVERY'
+                        AND order_products."productId"=products.id 
+                        AND orders.id=order_products."orderId"
                         AND orders."addressId"=addresses.id
-                        AND orders."driverId"=${id}`
+                        AND orders.id=driver_orders."orderId"
+                        AND driver_orders."driverId"=${id}`
                 )
                 .then((data) => {
                     if (data[0].length > 0) {
                         const routes = [];
-                        console.log(data[0]);
                         const latLangs = data[0].map((item) => item.latLang);
                         const addresses = data[0].map((item) => item.address);
                         var origins = ['Gijaba, Andhra Pradesh, India'];
@@ -53,13 +66,7 @@ app.get('/getroutes/:id', (req, res) => {
                         );
                         getDistancesFromOrigin(origins, destinations)
                             .then((distances) => {
-                                console.log(distances);
                                 for (let i = 0; i < data[0].length; i++) {
-                                    console.log(
-                                        distances[i].distance,
-                                        'distance'
-                                    );
-                                    console.log(data[0][i].address, 'address');
                                     if (i === 0) {
                                         routes.push({
                                             orderId: data[0][i].orderId,
@@ -76,10 +83,16 @@ app.get('/getroutes/:id', (req, res) => {
                                         });
                                     }
                                 }
-                                routes.sort((a, b) => a.distance - b.distance);
+                                routes.sort((a, b) =>
+                                    a.distance.toLowerCase() >
+                                    b.distance.toLowerCase()
+                                        ? 1
+                                        : -1
+                                );
+
                                 res.status(200).json({
                                     success: true,
-                                    routes,
+                                    routes: routes,
                                 });
                             })
                             .catch((err) => {
@@ -99,6 +112,52 @@ app.get('/getroutes/:id', (req, res) => {
         }
     });
 });
+app.post('/setorder', (req, res) => {
+    console.log(req.body, 'req.body');
+    const { orderId } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, 'secret', (err, decoded) => {
+        if (err) {
+            console.log(err);
+            res.json({
+                success: false,
+                message: 'Token is not valid',
+            });
+        } else {
+            orders
+                .update(
+                    {
+                        status: 'OUT_FOR_DELIVERY',
+                    },
+                    {
+                        where: {
+                            id: orderId,
+                        },
+                    }
+                )
+                .then((data) => {
+                    driver_orders
+                        .create({
+                            driverId: decoded.id,
+                            orderId: orderId,
+                        })
+                        .then((data) => {
+                            res.status(200).json({
+                                success: true,
+                                message: 'Order updated',
+                            });
+                        });
+                })
+                .catch((err) => {
+                    console.log(err);
+                    res.status(500).json({
+                        success: false,
+                        message: 'Error updating order',
+                    });
+                });
+        }
+    });
+});
 
 app.get('/getrouteorders/:id', (req, res) => {
     const { id } = req.params;
@@ -114,14 +173,16 @@ app.get('/getrouteorders/:id', (req, res) => {
         } else {
             db.sequelize
                 .query(
-                    `SELECT orders.id as "orderId",products."productname",users."name",addresses.address,users.phonenumber,orders.status,orders."driverId"
-                        from orders,users,products,order_products,addresses
+                    `SELECT orders.id as "orderId",products."productname",users."name",addresses.address,
+                    users.phonenumber,orders.status,driver_orders."driverId"
+                        from orders,users,products,order_products,addresses,driver_orders
                         where orders."userId"=users.id
                         AND orders.status='OUT_FOR_DELIVERY'
                         AND order_products."productId"=products.id 
                         AND orders.id=order_products."orderId"
                         AND orders."addressId"=addresses.id
-                        AND orders."driverId"=${id}`
+                        AND orders.id=driver_orders."orderId"
+                        AND driver_orders."driverId"=${id}`
                 )
                 .then((data) => {
                     if (data) {
@@ -163,7 +224,6 @@ app.get('/getreceivedorders/:driverId', (req, res) => {
                         include: [
                             {
                                 model: orders,
-
                                 where: {
                                     status: {
                                         [Op.or]: [
